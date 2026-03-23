@@ -22,6 +22,7 @@ async def main():
     cache_manager = CacheManager(client)
     registry = ModelRegistry(config["models_dir"])
     switcher = ModelSwitcher(server, registry)
+    generation_params = config.get("generation_params", {}).copy()
 
     server.start(registry.get_path(config["default_model"]))
     session = Session(config["default_system_prompt"])
@@ -29,6 +30,22 @@ async def main():
     while True:
         user_input = input("You: ").strip()
         if not user_input:
+            continue
+
+        if user_input.startswith("/set "):
+            parts = user_input.split(maxsplit=2)
+            if len(parts) == 3:
+                _, key, raw = parts
+                try:
+                    generation_params[key] = float(raw)
+                    print(f"[SYSTEM] Set {key} = {generation_params[key]}")
+                except ValueError:
+                    print(f"[SYSTEM] Invalid value: {raw}")
+            continue
+
+        if user_input == "/params":
+            for k, v in generation_params.items():
+                print(f"  {k} = {v}")
             continue
 
         if user_input == "/verbose":
@@ -43,7 +60,10 @@ async def main():
             continue
 
         session.add_user_message(user_input)
-        response = await client.chat(session.get_messages_for_api())
+        response = await client.chat(
+            session.get_messages_for_api(),
+            params=generation_params,
+        )
 
         content = response["choices"][0]["message"]["content"]
         timings = response.get("timings", {})

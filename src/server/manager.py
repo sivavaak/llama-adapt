@@ -3,6 +3,11 @@ import httpx
 import time
 import threading
 
+CLI_FLAG_MAP = {
+    "ctx_size": "--ctx-size",
+    "n_gpu_layers": "--n-gpu-layers",
+}
+
 class ServerManager:
     def __init__(self, config: dict, verbose: bool = False):
         self.config = config
@@ -14,13 +19,19 @@ class ServerManager:
     def start(self, model_path: str):
         self.stop()
         # temperature, other params?
-        self.process = subprocess.Popen([
+        args = [
             "llama-server",
             "--model", model_path,
+            "--slots",
             "--slot-save-path", self.config["cache_dir"],
             "--port", str(self.config["port"]),
-            "-np", str(self.config["n_slots"]),            
-        ],
+            "-np", str(self.config["n_slots"]),
+        ]
+        for key, value in self.config.get("server_params", {}).items():
+            flag = CLI_FLAG_MAP.get(key)
+            if flag:
+                args += [flag, str(value)]
+        self.process = subprocess.Popen(args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

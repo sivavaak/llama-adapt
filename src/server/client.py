@@ -4,15 +4,22 @@ class LlamaClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
     
-    async def chat(self, messages: list[dict], slot_id: int = 0) -> dict:
+    async def chat(
+        self,
+        messages: list[dict],
+        slot_id: int = 0,
+        params: dict | None = None,
+    ) -> dict:
+        body = {
+            "messages": messages,
+            "cache_prompt": True,
+            "id_slot": slot_id,
+            **(params or {}),
+        }
         async with httpx.AsyncClient(timeout=120) as client:
             response = await client.post(
                 f"{self.base_url}/v1/chat/completions",
-                json={
-                    "messages": messages,
-                    "cache_prompt": True,
-                    "id_slot": slot_id,
-                },
+                json=body,
             )
             return response.json()
         
