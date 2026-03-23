@@ -2,7 +2,7 @@
     "port": 8080,
     "n_slots": 2,
     "models_dir": "./models",
-    "sessions_dir": "./sessions",
+    "sessions_dir": "./session",
     "cache_dir": "./cache",
     "default_model": "dolphin-2.9-llama3-8b.Q4_0.gguf",
     "default_system_prompt": "You are a helpful assistant."

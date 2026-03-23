@@ -8,12 +8,15 @@ from src.session.cache import CacheManager
 from src.models.registry import ModelRegistry
 from src.models.switcher import ModelSwitcher
 from datetime import datetime, timezone
+import sys
 
 async def main():
+
+    verbose = "--verbose" in sys.argv or "-v" in sys.argv
     with open("config.json") as f:
         config = json.load(f)
 
-    server = ServerManager(config)
+    server = ServerManager(config, verbose=verbose)
     client = LlamaClient(f"http://localhost:{config['port']}")
     storage = SessionStorage(config["sessions_dir"])
     cache_manager = CacheManager(client)
@@ -26,6 +29,17 @@ async def main():
     while True:
         user_input = input("You: ").strip()
         if not user_input:
+            continue
+
+        if user_input == "/verbose":
+            server.verbose = not server.verbose
+            print(f"[SYSTEM] Verbose: {'on' if server.verbose else 'off'}")
+            continue
+
+        if user_input.startswith("/switch "):
+            model_name = user_input.split(" ", 1)[1]
+            switcher.switch(model_name, session)
+            print(f"[SYSTEM] Switched to {model_name}")
             continue
 
         session.add_user_message(user_input)
