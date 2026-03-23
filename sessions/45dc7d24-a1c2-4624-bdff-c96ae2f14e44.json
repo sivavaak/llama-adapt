@@ -1,0 +1,101 @@
+{
+  "id": "45dc7d24-a1c2-4624-bdff-c96ae2f14e44",
+  "created_at": "2026-03-23T17:30:20.074738+00:00",
+  "messages": [
+    {
+      "id": "8a0015c7-9651-4cea-a3e7-06d81a405415",
+      "role": "system",
+      "content": "You are a helpful assistant.",
+      "timestamp": "2026-03-23T17:30:20.074752+00:00"
+    },
+    {
+      "id": "f028d6d1-9084-4805-94e1-023b519eadf2",
+      "role": "user",
+      "content": "hello!",
+      "timestamp": "2026-03-23T17:30:44.575654+00:00"
+    },
+    {
+      "id": "f1b22d0a-af6f-4b28-8e39-4d39e1ae2004",
+      "role": "assistant",
+      "content": "Hey there! What can I assist you with today?",
+      "timestamp": "2026-03-23T17:30:45.392736+00:00",
+      "metadata": {
+        "model": "./models\\dolphin-2.9-llama3-8b.Q4_0.gguf",
+        "tokens_prompt": 25,
+        "tokens_generated": 12,
+        "generation_ms": 85.99,
+        "prompt_ms": 300.002,
+        "cache_n": 0,
+        "timestamp": "2026-03-23T17:30:45.392711+00:00"
+      }
+    },
+    {
+      "id": "a76e0872-2656-48d2-aae9-34717de93ee5",
+      "role": "user",
+      "content": "My favorite number is 1203.",
+      "timestamp": "2026-03-23T17:30:56.280602+00:00"
+    },
+    {
+      "id": "c3fae948-b593-43c2-a096-c769efbe4cb3",
+      "role": "assistant",
+      "content": "I'm glad you like it! Remember that it's just a number, and it doesn't hold any special meaning or importance. It's helpful to keep that in mind when you're working with numbers, especially if you're trying to solve a problem or complete a task.",
+      "timestamp": "2026-03-23T17:30:57.325924+00:00",
+      "metadata": {
+        "model": "./models\\dolphin-2.9-llama3-8b.Q4_0.gguf",
+        "tokens_prompt": 56,
+        "tokens_generated": 56,
+        "generation_ms": 415.908,
+        "prompt_ms": 214.259,
+        "cache_n": 24,
+        "timestamp": "2026-03-23T17:30:57.325902+00:00"
+      }
+    },
+    {
+      "id": "9ea19add-5cdf-4699-9b6d-ac73ef82195b",
+      "role": "user",
+      "content": "What is my favorite number?",
+      "timestamp": "2026-03-23T17:31:05.708070+00:00"
+    },
+    {
+      "id": "e9d3f25a-c81d-4c34-a32c-fca6215f89e8",
+      "role": "assistant",
+      "content": "I'm not sure what your favorite number is. Is there something else you'd like me to do or help you with?",
+      "timestamp": "2026-03-23T17:31:06.506743+00:00",
+      "metadata": {
+        "model": "./models\\dolphin-2.9-llama3-8b.Q4_0.gguf",
+        "tokens_prompt": 135,
+        "tokens_generated": 26,
+        "generation_ms": 188.624,
+        "prompt_ms": 203.646,
+        "cache_n": 55,
+        "timestamp": "2026-03-23T17:31:06.506720+00:00"
+      }
+    },
+    {
+      "id": "068acbe0-1683-4e1d-b1fe-b4222cc849e2",
+      "role": "user",
+      "content": "What did I ask before?",
+      "timestamp": "2026-03-23T17:31:18.394809+00:00"
+    },
+    {
+      "id": "bd0b500e-fd13-4408-bf14-7a1afd82838b",
+      "role": "assistant",
+      "content": "I believe you asked me what your favorite number is. Is there anything else you' need help with, or is there something else you' want me to do?",
+      "timestamp": "2026-03-23T17:31:19.348537+00:00",
+      "metadata": {
+        "model": "./models\\dolphin-2.9-llama3-8b.Q4_0.gguf",
+        "tokens_prompt": 180,
+        "tokens_generated": 34,
+        "generation_ms": 249.616,
+        "prompt_ms": 297.658,
+        "cache_n": 134,
+        "timestamp": "2026-03-23T17:31:19.348516+00:00"
+      }
+    }
+  ],
+  "kv_cache": {
+    "model_file": "./models\\dolphin-2.9-llama3-8b.Q4_0.gguf",
+    "cache_file": "45dc7d24-a1c2-4624-bdff-c96ae2f14e44.bin",
+    "valid_through_message_id": "bd0b500e-fd13-4408-bf14-7a1afd82838b"
+  }
+}
