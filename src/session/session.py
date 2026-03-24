@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime, timezone
 
 class Session:
-    def __init__(self, system_prompt: str = None):
+    def __init__(self, system_prompt: str = None, title: str = None):
         self.id = str(uuid.uuid4())
         self.created_at = datetime.now(timezone.utc).isoformat()
         self.messages = []
         self.kv_cache = None
+        self.title = title
 
         if system_prompt:
             self.messages.append({
@@ -15,6 +16,16 @@ class Session:
                 "content": system_prompt,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
+
+    def set_title(self, title: str):
+        self.title = title
+
+    def auto_title(self, max_len: int = 48):
+        for m in self.messages:
+            if m["role"] == "user":
+                content = m["content"].strip().replace("\n", " ")
+                self.title = content if len(content) <= max_len else content[:max_len].rstrip() + "..."
+                return
 
     def add_user_message(self, content: str):
         self.messages.append({

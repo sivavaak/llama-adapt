@@ -28,6 +28,7 @@ class SessionStorage:
         return {
             "id": session.id,
             "created_at": session.created_at,
+            "title": session.title,
             "messages": session.messages,
             "kv_cache": session.kv_cache,
         }
@@ -36,6 +37,7 @@ class SessionStorage:
         session = Session()
         session.id = data["id"]
         session.created_at = data["created_at"]
+        session.title = data.get("title")
         session.messages = data["messages"]
         session.kv_cache = data.get("kv_cache")
         return session

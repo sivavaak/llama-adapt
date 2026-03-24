@@ -9,6 +9,69 @@ from src.models.registry import ModelRegistry
 from src.models.switcher import ModelSwitcher
 from datetime import datetime, timezone
 import sys
+import os
+
+def select_session(storage: SessionStorage, config: dict) -> Session:
+    sessions = storage.list_sessions()
+
+    if not sessions:
+        print("No existing sessions. Starting new session.")
+        return Session(config["default_system_prompt"])
+
+    print("Existing sessions:")
+    for i, sid in enumerate(sessions):
+        session = storage.load(sid)
+        label = session.title or sid
+        print(f"  [{i}] {label}")
+    print(f"  [n] New session")
+
+    choice = input("Select session: ").strip().lower()
+
+    if choice == "n":
+        return Session(config["default_system_prompt"])
+
+    try:
+        idx = int(choice)
+        if 0 <= idx < len(sessions):
+            session = storage.load(sessions[idx])
+            print(f"Loaded session {session.title or session.id}")
+            return session
+    except ValueError:
+        pass
+
+    print("Invalid choice. Starting new session.")
+    return Session(config["default_system_prompt"])
+
+def prompt_new_session(config: dict) -> Session:
+    return Session(config["default_system_prompt"])
+
+def switch_session(storage: SessionStorage, config: dict) -> Session | None:
+    sessions = storage.list_sessions()
+    if not sessions:
+        print("No saved sessions.")
+        return None
+
+    print("Sessions:")
+    for i, sid in enumerate(sessions):
+        s = storage.load(sid)
+        label = s.title or sid
+        print(f"  [{i}] {label}")
+
+    choice = input("Select session (or blank to cancel): ").strip()
+    if not choice:
+        return None
+
+    try:
+        idx = int(choice)
+        if 0 <= idx < len(sessions):
+            session = storage.load(sessions[idx])
+            print(f"Switched to: {session.title or session.id}")
+            return session
+    except ValueError:
+        pass
+
+    print("Invalid choice.")
+    return None
 
 async def main():
 
@@ -25,11 +88,44 @@ async def main():
     generation_params = config.get("generation_params", {}).copy()
 
     server.start(registry.get_path(config["default_model"]))
-    session = Session(config["default_system_prompt"])
+    session = select_session(storage, config)
 
     while True:
         user_input = input("You: ").strip()
         if not user_input:
+            continue
+
+        if user_input == "/help":
+            print("""
+            Commands:
+            /help                 Show this message
+            /verbose              Toggle server logs
+            /title <title>        Set session title
+            /params               Show generation params
+            /set <key> <value>    Set a generation param
+            /model list           List all available models
+            /model switch <model> Switch the current session model
+            /session list         List all sessions
+            /session new          Start a new session
+            /session switch       Switch to another session
+            /session delete       Delete current session
+            """)
+            continue
+
+        if user_input == "/verbose":
+            server.verbose = not server.verbose
+            print(f"[SYSTEM] Verbose: {'on' if server.verbose else 'off'}")
+            continue
+
+        if user_input.startswith("/title "):
+            session.set_title(user_input[7:].strip())
+            print(f"Title set: {session.title}")
+            storage.save(session)
+            continue
+
+        if user_input == "/params":
+            for k, v in generation_params.items():
+                print(f"  {k} = {v}")
             continue
 
         if user_input.startswith("/set "):
@@ -43,23 +139,68 @@ async def main():
                     print(f"[SYSTEM] Invalid value: {raw}")
             continue
 
-        if user_input == "/params":
-            for k, v in generation_params.items():
-                print(f"  {k} = {v}")
+        if user_input == "/model list":
+            models = registry.list_models()
+            for i, m in enumerate(models):
+                marker = " *" if registry.get_path(m) == server.current_model else ""
+                print(f"  [{i}] {m}{marker}")
             continue
 
-        if user_input == "/verbose":
-            server.verbose = not server.verbose
-            print(f"[SYSTEM] Verbose: {'on' if server.verbose else 'off'}")
+        if user_input == "/model switch":
+            models = registry.list_models()
+            for i, m in enumerate(models):
+                marker = " *" if registry.get_path(m) == server.current_model else ""
+                print(f"  [{i}] {m}{marker}")
+
+            choice = input("Select model (or blank to cancel): ").strip()
+            if not choice:
+                continue
+
+            try:
+                idx = int(choice)
+                if 0 <= idx < len(models):
+                    switcher.switch(models[idx], session)
+                    print(f"Switched to: {models[idx]}")
+            except ValueError:
+                print("Invalid choice.")
             continue
 
-        if user_input.startswith("/switch "):
-            model_name = user_input.split(" ", 1)[1]
-            switcher.switch(model_name, session)
-            print(f"[SYSTEM] Switched to {model_name}")
+        if user_input == "/session list":
+            sessions = storage.list_sessions()
+            for i, sid in enumerate(sessions):
+                s = storage.load(sid)
+                label = s.title or sid
+                marker = " *" if sid == session.id else ""
+                print(f"  [{i}] {label}{marker}")
+            continue
+
+        if user_input == "/session new":
+            storage.save(session)
+            session = prompt_new_session(config)
+            print("[SYSTEM] New session started.")
+            continue
+
+        if user_input == "/session switch":
+            storage.save(session)
+            result = switch_session(storage, config)
+            if result:
+                session = result
+            print(f"[SYSTEM] Switched session to {session.title}")
+            continue
+
+        if user_input == "/session delete":
+            confirm = input(f"Delete '{session.title or session.id}'? (y/n): ").strip().lower()
+            if confirm == "y":
+                os.remove(os.path.join(config["sessions_dir"], f"{session.id}.json"))
+                print("[SYSTEM] Session deleted.")
+                session = prompt_new_session(config)
             continue
 
         session.add_user_message(user_input)
+
+        if session.title is None:
+            session.auto_title()
+
         response = await client.chat(
             session.get_messages_for_api(),
             params=generation_params,
