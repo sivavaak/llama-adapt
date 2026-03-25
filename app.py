@@ -15,17 +15,17 @@ def select_session(storage: SessionStorage, config: dict) -> Session:
     sessions = storage.list_sessions()
 
     if not sessions:
-        print("No existing sessions. Starting new session.")
+        print("[SYSTEM] No existing sessions. Starting new session.")
         return Session(config["default_system_prompt"])
 
-    print("Existing sessions:")
+    print("[SYSTEM] Existing sessions:")
     for i, sid in enumerate(sessions):
         session = storage.load(sid)
         label = session.title or sid
         print(f"  [{i}] {label}")
     print(f"  [n] New session")
 
-    choice = input("Select session: ").strip().lower()
+    choice = input("[SYSTEM] Select session: ").strip().lower()
 
     if choice == "n":
         return Session(config["default_system_prompt"])
@@ -39,7 +39,7 @@ def select_session(storage: SessionStorage, config: dict) -> Session:
     except ValueError:
         pass
 
-    print("Invalid choice. Starting new session.")
+    print("[SYSTEM] Invalid choice. Starting new session.")
     return Session(config["default_system_prompt"])
 
 def prompt_new_session(config: dict) -> Session:
@@ -48,7 +48,7 @@ def prompt_new_session(config: dict) -> Session:
 def switch_session(storage: SessionStorage, config: dict) -> Session | None:
     sessions = storage.list_sessions()
     if not sessions:
-        print("No saved sessions.")
+        print("[SYSTEM] No saved sessions.")
         return None
 
     print("Sessions:")
@@ -57,7 +57,7 @@ def switch_session(storage: SessionStorage, config: dict) -> Session | None:
         label = s.title or sid
         print(f"  [{i}] {label}")
 
-    choice = input("Select session (or blank to cancel): ").strip()
+    choice = input("[SYSTEM] Select session (or blank to cancel): ").strip()
     if not choice:
         return None
 
@@ -65,12 +65,12 @@ def switch_session(storage: SessionStorage, config: dict) -> Session | None:
         idx = int(choice)
         if 0 <= idx < len(sessions):
             session = storage.load(sessions[idx])
-            print(f"Switched to: {session.title or session.id}")
+            print(f"[SYSTEM] Switched to: {session.title or session.id}")
             return session
     except ValueError:
         pass
 
-    print("Invalid choice.")
+    print("[SYSTEM] Invalid choice.")
     return None
 
 async def main():
@@ -86,9 +86,15 @@ async def main():
     registry = ModelRegistry(config["models_dir"])
     switcher = ModelSwitcher(server, registry)
     generation_params = config.get("generation_params", {}).copy()
+    token_budget = (
+        config["server_params"]["ctx_size"] // config["n_slots"]
+        - generation_params.get("max_tokens", 512)
+        - 64
+    )
 
     server.start(registry.get_path(config["default_model"]))
     session = select_session(storage, config)
+    await cache_manager.try_restore(session, server.current_model)
 
     while True:
         user_input = input("You: ").strip()
@@ -119,7 +125,7 @@ async def main():
 
         if user_input.startswith("/title "):
             session.set_title(user_input[7:].strip())
-            print(f"Title set: {session.title}")
+            print(f"[SYSTEM] Title set: {session.title}")
             storage.save(session)
             continue
 
@@ -152,7 +158,7 @@ async def main():
                 marker = " *" if registry.get_path(m) == server.current_model else ""
                 print(f"  [{i}] {m}{marker}")
 
-            choice = input("Select model (or blank to cancel): ").strip()
+            choice = input("[SYSTEM] Select model (or blank to cancel): ").strip()
             if not choice:
                 continue
 
@@ -160,9 +166,9 @@ async def main():
                 idx = int(choice)
                 if 0 <= idx < len(models):
                     switcher.switch(models[idx], session)
-                    print(f"Switched to: {models[idx]}")
+                    print(f"[SYSTEM] Switched to: {models[idx]}")
             except ValueError:
-                print("Invalid choice.")
+                print("[SYSTEM] Invalid choice.")
             continue
 
         if user_input == "/session list":
@@ -185,7 +191,7 @@ async def main():
             result = switch_session(storage, config)
             if result:
                 session = result
-            print(f"[SYSTEM] Switched session to {session.title}")
+                await cache_manager.try_restore(session, server.current_model)
             continue
 
         if user_input == "/session delete":
@@ -196,13 +202,17 @@ async def main():
                 session = prompt_new_session(config)
             continue
 
+        if user_input.startswith("/"):
+            print(f"[SYSTEM] Unknown command: {user_input.split()[0]}")
+            continue
+
         session.add_user_message(user_input)
 
         if session.title is None:
             session.auto_title()
 
         response = await client.chat(
-            session.get_messages_for_api(),
+            session.get_windowed_messages(token_budget),
             params=generation_params,
         )
 

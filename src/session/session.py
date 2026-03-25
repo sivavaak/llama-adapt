@@ -50,6 +50,34 @@ class Session:
             for m in self.messages
         ]
 
+    def get_windowed_messages(self, token_budget: int) -> list[dict]:
+        system = [m for m in self.messages if m["role"] == "system"]
+        non_system = [m for m in self.messages if m["role"] != "system"]
+
+        used = sum(len(m["content"]) // 4 for m in system)
+        kept = []
+
+        i = len(non_system) - 1
+        while i >= 0:
+            if non_system[i]["role"] == "assistant" and i > 0:
+                pair = [non_system[i - 1], non_system[i]]
+                cost = sum(len(m["content"]) // 4 for m in pair)
+                if used + cost > token_budget:
+                    break
+                kept = pair + kept
+                used += cost
+                i -= 2
+            else:
+                m = non_system[i]
+                cost = len(m["content"]) // 4
+                if used + cost > token_budget:
+                    break
+                kept = [m] + kept
+                used += cost
+                i -= 1
+
+        return [{"role": m["role"], "content": m["content"]} for m in system + kept]
+
     def invalidate_cache(self):
         self.kv_cache = None
 
